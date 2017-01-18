@@ -1,0 +1,16 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <title>TinyApp</title>
+</head>
+<body>
+  <ul>
+      <% for (let tinyURL in urls) {%>
+    <li>
+      <%= tinyURL %>: <%= urls[tinyURL]; %>
+    </li>
+      <%} %>
+  </ul>
+  <a>Shorten a new URL</a>
+</body>
+</html>
