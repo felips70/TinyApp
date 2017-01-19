@@ -1,6 +1,8 @@
 <!DOCTYPE html>
 <html lang="en">
-  <head></head>
+  <head>
+    <% include partials/_head %>
+  </head>
   <body style="font-size:20px; padding:50px;">
     <header> <% include partials/_header %> </header>
     <form action="/urls" method="POST" style="margin:100px;">
@@ -8,5 +10,7 @@
       <input id="longURL" type="text" name="longURL" placeholder="http://" style="width: 300px">
       <input type="submit" value="Submit">
     </form>
+
+  <a href="/urls">Home</a>
   </body>
 </html>

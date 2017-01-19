@@ -1,19 +1,22 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <title>TinyApp</title>
+  <% include partials/_head %>
 </head>
 <body>
   <header>
     <% include partials/_header %>
   </header>
   <ul>
-      <% for (let tinyURL in urls) {%>
-    <li>
-      <%= tinyURL %>: <%= urls[tinyURL]; %>
-    </li>
-      <%} %>
+    <% for (let tinyURL in urls) { %>
+    <form method="POST" style="margin:20px" action=<%=`/urls/${tinyURL}/delete`%>>
+      <li>
+        <%= tinyURL %> &#x2192 <%= urls[tinyURL]; %>
+        <input type="submit" style="margin:10px" value="Delete">
+      </li>
+    </form>
+    <% } %>
   </ul>
-  <a>Shorten a new URL link</a>
+  <a href="/urls/new">Shorten a new URL</a>
 </body>
 </html>
