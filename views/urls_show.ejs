@@ -7,9 +7,12 @@
   <header>
     <% include partials/_header %>
   </header>
-  <p>
-    Full URL: <%= longURL %> <br> Shortened form: <%= shortURL %>
-  </p>
-  <a href="/urls">Home</a>
+  <h3>Short URL: <%= shortURL %></h3>
+  <form style="margin:30px;" method="POST" action=<%= `/urls/${shortURL}` %>>
+    <label for="newURL">Enter new URL:</label>
+    <input id="newURL" type="text" name="newURL" style="width: 300px" value=<%= longURL %>>
+    <input type="submit" value="Update">
+  </form>
+  <nav> <% include partials/_navigation.ejs %> </nav>
 </body>
 </html>
