@@ -11,13 +11,13 @@
     <% for (let tinyURL in urls) { %>
     <form method="POST" style="margin:20px" action=<%=`/urls/${tinyURL}/delete`%>>
       <li>
-        <%= tinyURL %> &#x2192 <%= urls[tinyURL]; %>
-        <a href=<%=`/urls/${tinyURL}`%>>Edit</a>
+        <%= tinyURL %> &#x2192 <a href=<%= urls[tinyURL] %>> <%= urls[tinyURL]; %> </a>
+        <a style="margin:15px" href=<%=`/urls/${tinyURL}`%>>Edit</a>
         <input type="submit" style="margin:10px" value="Delete">
       </li>
     </form>
     <% } %>
   </ul>
-  <a href="/urls/new">Shorten a new URL</a>
+  <a href="/urls/new">Create a new tinyURL link</a>
 </body>
 </html>

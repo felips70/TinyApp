@@ -32,6 +32,7 @@ app.get("/urls/new", (req, res) => {
   res.render("urls_new");
 });
 
+
 app.get("/u/:shortURL", (req, res) => {
 
   if (urlDatabase.hasOwnProperty(req.params.shortURL)) {  //if user imputs nonexistent tinyURL,
@@ -42,12 +43,20 @@ app.get("/u/:shortURL", (req, res) => {
   }
 });
 
+//Deletes selected tinyURL along with its corresponding URL
 app.post("/urls/:id/delete", (req, res) => {
-  let id = req.params.id;
   delete urlDatabase[req.params.id];
   res.redirect("/urls");
 });
 
+//Updates/changes URL to which tinyURL points to
+app.post("/urls/:tinyURL", (req, res) => {
+    urlDatabase[req.params.tinyURL] = req.body.newURL;
+    res.redirect("/urls");
+});
+
+
+//Adds a new link along with new tinyURL
 app.post("/urls", (req, res) => {
 
   let exitstingShortURL = resolveLongURL(req.body.longURL)
@@ -61,6 +70,7 @@ app.post("/urls", (req, res) => {
   }
 });
 
+// Takes user to URL updating page
 app.get("/urls/:id", (req, res) => {
   res.render("urls_show", { shortURL: req.params.id,
                             longURL: urlDatabase[req.params.id]});
