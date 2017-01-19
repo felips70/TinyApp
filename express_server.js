@@ -13,6 +13,11 @@ app.get("/urls", (req, res) => {
   res.render("urls_index", { urls: urlDatabase });
 });
 
+app.get("/urls/:id", (req, res) => {
+  res.render("urls_show", { shortURL: req.params.id,
+                            longURL: urlDatabase[req.params.id]});
+});
+
 app.listen(PORT, () => {
   console.log(`Example app listening on port ${PORT}!`);
 });
