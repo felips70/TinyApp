@@ -6,18 +6,22 @@
 <body>
   <header>
     <% include partials/_header %>
+    <%= //JSON.stringify(allUsers) %>
   </header>
+  <% if (user_id) {%>
   <ul>
-    <% for (let tinyURL in urls) { %>
+    <% let currUserLinks = allUsers[user_id].links; %>
+    <% for (let tinyURL in currUserLinks) { %>
     <form method="POST" style="margin:20px" action=<%=`/urls/${tinyURL}/delete`%>>
       <li>
-        <%= tinyURL %> &#x2192 <a href=<%= urls[tinyURL] %>> <%= urls[tinyURL]; %> </a>
+        <a href=<%= urls[tinyURL]%>> <%= tinyURL %></a> &#x2192 <a href=<%= urls[tinyURL] %>> <%= urls[tinyURL]; %> </a>
         <a style="margin:15px" href=<%=`/urls/${tinyURL}`%>>Edit</a>
         <input type="submit" style="margin:10px" value="Delete">
       </li>
     </form>
     <% } %>
   </ul>
-  <a href="/urls/new">Create a new tinyURL link</a>
+  <% } %>
+  <% include partials/_footer.ejs %>
 </body>
 </html>

@@ -6,10 +6,14 @@
 
 <div style="margin:30px;">
   <% if (user_id) {%>
+  <div>
+    You are logged in as: <%= allUsers[user_id].email %>
+  </div>
   <form style="display:inline;" method="POST" action="/logout" >
     <input type="submit" value="Log out">
   </form>
-  <% } %>
-    <a href="/register" style="margin:15px">Register</a>
+  <% } else { %>
     <a href="/login" style="margin:15px">Log in</a>
+    <a href="/register" style="margin:15px">Register</a>
+  <% } %>
 </div>
