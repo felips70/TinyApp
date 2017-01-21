@@ -2,14 +2,19 @@ const express = require("express");
 const app = express();
 const PORT = process.env.PORT || 8080; //default port 8080
 const bodyParser = require("body-parser");
-const cookieParser = require('cookie-parser');
+const bcrypt = require('bcrypt');
+const cookieSession = require('cookie-session');
 app.use(bodyParser.urlencoded({extended: true}));
-app.use(cookieParser());
 app.set("view engine", "ejs");
 
 let urlDatabase = {}; //All URL links made by all users
 
 let usersDatabase = {}; //UserID, email, password and user-specific specific links. Defined in user registration app.post
+
+app.use(cookieSession({
+  name: "session",
+  secret: "somesecret"
+}));
 
 //Checks wether given URL is already in urlDatabase
 function resolveLongURL (longURL, userID) {
@@ -31,10 +36,13 @@ function resolveEmail (email) {
   }
 }
 
-//If given email and password, if exist in usersDatabase returns corresponding user_id
+//If given email and password, if exist in usersDatabase returns corresponding user_id, takes into account hashing passwords
 function confirmLogIn (email, password) {
+  // JH claims that every password works for every user.  Test if true.
   for (let userIDs in usersDatabase) {
-    if (email === usersDatabase[userIDs].email && password === usersDatabase[userIDs].password) {
+    let currUserEmail = usersDatabase[userIDs].email;
+    let hashedPassword = usersDatabase[userIDs].password;
+    if (email === currUserEmail && bcrypt.compareSync(password, hashedPassword)) {
       return usersDatabase[userIDs].id;
     }
   }
@@ -52,7 +60,7 @@ app.get("/", (req, res) => {
 //Main page where all links are displayed
 app.get("/urls", (req, res) => {
   let templateVars = { urls: urlDatabase,
-                       user_id: req.cookies["user_id"],
+                       user_id: req.session.user_id,
                        allUsers: usersDatabase };
   console.log(templateVars);
   res.render("urls_index", templateVars);
@@ -62,7 +70,7 @@ app.get("/urls", (req, res) => {
 //Page where user can add a new URL
 app.get("/urls/new", (req, res) => {
   let templateVars = { urls: urlDatabase,
-                       user_id: req.cookies["user_id"],
+                       user_id: req.session.user_id,
                        allUsers: usersDatabase };
   res.render("urls_new", templateVars);
 });
@@ -97,21 +105,23 @@ app.post("/register", (req, res) => {
   } else if (!req.body.email) {
     res.status(400).send('Please type in an email');
   } else {
-    //res.cookie("user_id" , req.body.user_id);
+    let nonHashed = req.body.password;
+    let hashedPassword = bcrypt.hashSync(nonHashed, 10);
     let userID = generateRandomString();
+    req.session.user_id = userID;
+
     usersDatabase[userID] = {id: userID,
                              email: req.body.email,
-                             password: req.body.password,
+                             password: hashedPassword,
                              links: {} };   //Object where user-specific links are stored
 
-    res.cookie("user_id" , userID);
     res.redirect("/");
   }
 });
 
 //Logs person out
 app.post("/logout", (req, res) => {
-  res.clearCookie("user_id");
+  req.session.user_id = null;
   res.redirect("/");
 });
 
@@ -119,12 +129,12 @@ app.post("/logout", (req, res) => {
 app.post("/login", (req, res) => {
   let tryEmail = req.body.email;
   let tryPassword = req.body.password;
-  let userIdCookie = confirmLogIn(tryEmail, tryPassword);
+  let userId = confirmLogIn(tryEmail, tryPassword);
 
-  if (!userIdCookie) {
+  if (!userId) {
     res.status(403).send('Wrong email or password');
   } else {
-    res.cookie("user_id" , userIdCookie);
+    req.session.user_id = userId;
     res.redirect("/");
   }
 
@@ -132,7 +142,7 @@ app.post("/login", (req, res) => {
 
 //Deletes selected tinyURL along with its corresponding URL
 app.post("/urls/:id/delete", (req, res) => {
-  let userIdCookie = req.cookies["user_id"];
+  let userIdCookie = req.session.user_id;
   delete urlDatabase[req.params.id];                        //Deletes link in urlDatabase (where all URLs are, but are not bound to the users)
   delete usersDatabase[userIdCookie].links[req.params.id];  //Deletes link in usersDatabase (where user-specific links are)
   res.redirect("/urls");
@@ -140,7 +150,7 @@ app.post("/urls/:id/delete", (req, res) => {
 
 //Updates/changes URL to which tinyURL points to
 app.post("/urls/:tinyURL", (req, res) => {
-    let userIdCookie = req.cookies["user_id"];
+    let userIdCookie = req.session.user_id;
   urlDatabase[req.params.tinyURL] = req.body.newURL;                        //Updates link in urlDatabase (where all URLs are, but are not bound to the users)
   usersDatabase[userIdCookie].links[req.params.tinyURL] = req.body.newURL;  //Updates link in usersDatabase (where user-specific links are)
   res.redirect("/urls");
@@ -150,7 +160,7 @@ app.post("/urls/:tinyURL", (req, res) => {
 //Adds a new link along with new tinyURL
 app.post("/urls", (req, res) => {
 
-  let currentUserCookie = req.cookies.user_id;
+  let currentUserCookie = req.session.user_id;
   let exitstingShortURL = resolveLongURL(req.body.longURL, currentUserCookie);
   if (exitstingShortURL) {
     res.redirect(`/urls/${exitstingShortURL}`)
@@ -166,7 +176,7 @@ app.post("/urls", (req, res) => {
 app.get("/urls/:id", (req, res) => {
   let templateVars = { shortURL: req.params.id,
                        longURL: urlDatabase[req.params.id],
-                       user_id: req.cookies["user_id"],
+                       user_id: req.session.user_id,
                        allUsers: usersDatabase}
 
   res.render("urls_show", templateVars);
