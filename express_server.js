@@ -62,7 +62,6 @@ app.get("/urls", (req, res) => {
   let templateVars = { urls: urlDatabase,
                        user_id: req.session.user_id,
                        allUsers: usersDatabase };
-  console.log(templateVars);
   res.render("urls_index", templateVars);
 });
 
@@ -82,7 +81,7 @@ app.get("/u/:shortURL", (req, res) => {
   if (urlDatabase.hasOwnProperty(req.params.shortURL)) {  //if user imputs nonexistent tinyURL,
     res.redirect(longURL);
   } else {
-    res.redirect("/urls")
+    res.status(404).send('This link has not been created');
   }
 });
 
@@ -151,9 +150,14 @@ app.post("/urls/:id/delete", (req, res) => {
 //Updates/changes URL to which tinyURL points to
 app.post("/urls/:tinyURL", (req, res) => {
     let userIdCookie = req.session.user_id;
+  if (urlDatabase[req.params.tinyURL]) {
   urlDatabase[req.params.tinyURL] = req.body.newURL;                        //Updates link in urlDatabase (where all URLs are, but are not bound to the users)
   usersDatabase[userIdCookie].links[req.params.tinyURL] = req.body.newURL;  //Updates link in usersDatabase (where user-specific links are)
   res.redirect("/urls");
+  } else {
+      res.status(404).send('This link does not exist in the database');
+
+  }
 });
 
 
