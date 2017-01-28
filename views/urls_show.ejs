@@ -1,18 +1,20 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <% include partials/_head %>
+  <title>TinyApp</title>
 </head>
 <body>
   <header>
     <% include partials/_header %>
   </header>
+  <% longURL = userLinks[urlId] %>
+  <% shortURL = urlId %>
   <h3>Short URL: <a href=<%=longURL%>><%= shortURL %></a></h3>
   <form style="margin:30px;" method="POST" action=<%= `/urls/${shortURL}` %>>
     <label for="newURL">You may edit your URL here:</label>
     <input id="newURL" type="text" name="newURL" style="width: 300px" value=<%=longURL%>>
     <input type="submit" value="Update">
   </form>
-  <nav> <% include partials/_navigation.ejs %> </nav>
+  <nav> <a href="/urls">Home</a> </nav>
 </body>
 </html>

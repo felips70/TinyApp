@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="en">
   <head>
-    <% include partials/_head %>
+    <title>TinyApp</title>
   </head>
   <body style="font-size:20px; padding:50px;">
     <header> <% include partials/_header %> </header>
@@ -10,6 +10,6 @@
       <input id="longURL" type="text" name="longURL" placeholder="http://" style="width: 300px">
       <input type="submit" value="Submit">
     </form>
-  <nav> <% include partials/_navigation.ejs %> </nav>
+  <nav> <a href="/urls">Home</a> </nav>
   </body>
 </html>

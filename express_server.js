@@ -9,7 +9,7 @@ app.set("view engine", "ejs");
 
 let urlDatabase = {}; //All URL links made by all users
 
-let usersDatabase = {}; //UserID, email, password and user-specific specific links. Defined in user registration app.post
+let usersDatabase = {}; //userId, email, password and user-specific specific links. Defined in user registration app.post
 
 app.use(cookieSession({
   name: "session",
@@ -17,35 +17,57 @@ app.use(cookieSession({
 }));
 
 //Checks wether given URL is already in urlDatabase
-function resolveLongURL (longURL, userID) {
-  let userLinks = usersDatabase[userID].links;
+function resolveLongURL (longURL, userId) {
+  let userLinks = usersDatabase[userId].links;
 
   for (let tinyURL in userLinks) {
     if (userLinks[tinyURL] === longURL) {
       return tinyURL;
     }
   }
+  return null;
 }
 
 //Checks wether given email is already in usersDatabase
 function resolveEmail (email) {
-  for (let userIDs in usersDatabase) {
-    if (usersDatabase[userIDs].email === email) {
+  for (let userId in usersDatabase) {
+    if (usersDatabase[userId].email === email) {
       return email;
     }
   }
+  return null;
 }
 
 //If given email and password, if exist in usersDatabase returns corresponding user_id, takes into account hashing passwords
-function confirmLogIn (email, password) {
-  // JH claims that every password works for every user.  Test if true.
-  for (let userIDs in usersDatabase) {
-    let currUserEmail = usersDatabase[userIDs].email;
-    let hashedPassword = usersDatabase[userIDs].password;
+function getUserId (email, password) {
+  for (let userIds in usersDatabase) {
+    let currUserEmail = usersDatabase[userIds].email;
+    let hashedPassword = usersDatabase[userIds].password;
     if (email === currUserEmail && bcrypt.compareSync(password, hashedPassword)) {
-      return usersDatabase[userIDs].id;
+      return usersDatabase[userIds].id;
     }
   }
+  return null;
+}
+
+//Makes templateVars available to GET requests given req and res
+function getTemplateVars (req, res, tinyURL) {
+  let urlId = tinyURL ? tinyURL : null;
+  let userId;
+  let userLinks;
+  let userEmail;
+  if (req.session.user_id) {
+    userId = req.session.user_id;
+    userLinks = usersDatabase[userId].links;
+    userEmail = usersDatabase[userId].email;
+  }
+  let templateVars = { urls: urlDatabase,
+                       user_id: req.session.user_id,
+                       userLinks: userLinks,
+                       userEmail: userEmail,
+                       urlId: urlId
+                     }
+  return templateVars;
 }
 
 function generateRandomString() {
@@ -59,26 +81,23 @@ app.get("/", (req, res) => {
 
 //Main page where all links are displayed
 app.get("/urls", (req, res) => {
-  let templateVars = { urls: urlDatabase,
-                       user_id: req.session.user_id,
-                       allUsers: usersDatabase };
+  let templateVars = getTemplateVars(req, res);
+
   res.render("urls_index", templateVars);
 });
 
 
 //Page where user can add a new URL
 app.get("/urls/new", (req, res) => {
-  let templateVars = { urls: urlDatabase,
-                       user_id: req.session.user_id,
-                       allUsers: usersDatabase };
+  let templateVars = getTemplateVars(req, res);
+
   res.render("urls_new", templateVars);
 });
 
 //Redirects all tinyURLS to their corresponding longURL links
-app.get("/u/:shortURL", (req, res) => {
-
-  let longURL = urlDatabase[req.params.shortURL];        //redirects to the same webpage he is in (home)
-  if (urlDatabase.hasOwnProperty(req.params.shortURL)) {  //if user imputs nonexistent tinyURL,
+app.get("/u/:tinyURL", (req, res) => {
+  let longURL = urlDatabase[req.params.tinyURL];        //redirects to the same webpage he is in (home)
+  if (urlDatabase.hasOwnProperty(req.params.tinyURL)) {  //if user imputs nonexistent tinyURL,
     res.redirect(longURL);
   } else {
     res.status(404).send('This link has not been created');
@@ -95,7 +114,7 @@ app.get("/login", (req, res) => {
   res.render("user_login");
 });
 
-//Registers new email and password to the local object database
+//Registers new email and password to the local database object
 app.post("/register", (req, res) => {
   let existingEmail = resolveEmail(req.body.email);
 
@@ -106,10 +125,10 @@ app.post("/register", (req, res) => {
   } else {
     let nonHashed = req.body.password;
     let hashedPassword = bcrypt.hashSync(nonHashed, 10);
-    let userID = generateRandomString();
-    req.session.user_id = userID;
+    let userId = generateRandomString();
+    req.session.user_id = userId;
 
-    usersDatabase[userID] = {id: userID,
+    usersDatabase[userId] = {id: userId,
                              email: req.body.email,
                              password: hashedPassword,
                              links: {} };   //Object where user-specific links are stored
@@ -120,7 +139,7 @@ app.post("/register", (req, res) => {
 
 //Logs person out
 app.post("/logout", (req, res) => {
-  req.session.user_id = null;
+  delete req.session.user_id;
   res.redirect("/");
 });
 
@@ -128,8 +147,7 @@ app.post("/logout", (req, res) => {
 app.post("/login", (req, res) => {
   let tryEmail = req.body.email;
   let tryPassword = req.body.password;
-  let userId = confirmLogIn(tryEmail, tryPassword);
-
+  let userId = getUserId(tryEmail, tryPassword);
   if (!userId) {
     res.status(403).send('Wrong email or password');
   } else {
@@ -140,23 +158,22 @@ app.post("/login", (req, res) => {
 });
 
 //Deletes selected tinyURL along with its corresponding URL
-app.post("/urls/:id/delete", (req, res) => {
+app.post("/urls/:tinyURL/delete", (req, res) => {
   let userIdCookie = req.session.user_id;
-  delete urlDatabase[req.params.id];                        //Deletes link in urlDatabase (where all URLs are, but are not bound to the users)
-  delete usersDatabase[userIdCookie].links[req.params.id];  //Deletes link in usersDatabase (where user-specific links are)
+  delete urlDatabase[req.params.tinyURL];                        //Deletes link in urlDatabase (where all URLs are, but are not bound to the users)
+  delete usersDatabase[userIdCookie].links[req.params.tinyURL];  //Deletes link in usersDatabase (where user-specific links are)
   res.redirect("/urls");
 });
 
 //Updates/changes URL to which tinyURL points to
 app.post("/urls/:tinyURL", (req, res) => {
     let userIdCookie = req.session.user_id;
-  if (urlDatabase[req.params.tinyURL]) {
-  urlDatabase[req.params.tinyURL] = req.body.newURL;                        //Updates link in urlDatabase (where all URLs are, but are not bound to the users)
-  usersDatabase[userIdCookie].links[req.params.tinyURL] = req.body.newURL;  //Updates link in usersDatabase (where user-specific links are)
-  res.redirect("/urls");
+  if (!urlDatabase[req.params.tinyURL]) {
+    res.status(404).send('This link does not exist in the database');
   } else {
-      res.status(404).send('This link does not exist in the database');
-
+    urlDatabase[req.params.tinyURL] = req.body.newURL;                        //Updates link in urlDatabase (where all URLs are, but are not bound to the users)
+    usersDatabase[userIdCookie].links[req.params.tinyURL] = req.body.newURL;  //Updates link in usersDatabase (where user-specific links are)
+    res.redirect("/urls");
   }
 });
 
@@ -164,26 +181,30 @@ app.post("/urls/:tinyURL", (req, res) => {
 //Adds a new link along with new tinyURL
 app.post("/urls", (req, res) => {
 
-  let currentUserCookie = req.session.user_id;
-  let exitstingShortURL = resolveLongURL(req.body.longURL, currentUserCookie);
+  let currentUserId = req.session.user_id;
+  let exitstingShortURL = resolveLongURL(req.body.longURL, currentUserId);
   if (exitstingShortURL) {
     res.redirect(`/urls/${exitstingShortURL}`)
   } else {
+    let newLongURL = '';
     let newShortURL = generateRandomString();
-    urlDatabase[newShortURL] = req.body.longURL;
-    usersDatabase[currentUserCookie].links[newShortURL] = req.body.longURL;
+    req.body.longURL.slice(0,7) === 'http://' ? newLongURL = req.body.longURL : newLongURL = 'http://' + req.body.longURL;
+    urlDatabase[newShortURL] = newLongURL;
+    usersDatabase[currentUserId].links[newShortURL] = newLongURL;
     res.redirect(`/urls/${newShortURL}`);
   }
 });
 
 // Takes user to URL updating page
-app.get("/urls/:id", (req, res) => {
-  let templateVars = { shortURL: req.params.id,
-                       longURL: urlDatabase[req.params.id],
-                       user_id: req.session.user_id,
-                       allUsers: usersDatabase}
+app.get("/urls/:tinyURL", (req, res) => {
+  let userIdCookie = req.session.user_id;
+  if (!userIdCookie) {
+      res.status(400).send('You have to be logged in to edit links');
+  } else {
+    let templateVars = getTemplateVars(req, res, req.params.tinyURL);
 
-  res.render("urls_show", templateVars);
+    res.render("urls_show", templateVars);
+  }
 });
 
 

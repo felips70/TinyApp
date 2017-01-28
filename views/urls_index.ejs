@@ -1,27 +1,29 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <% include partials/_head %>
+  <title>TinyApp</title>
 </head>
 <body>
   <header>
     <% include partials/_header %>
-    <%= //JSON.stringify(allUsers) %>
   </header>
   <% if (user_id) {%>
   <ul>
-    <% let currUserLinks = allUsers[user_id].links; %>
+    <% let currUserLinks = userLinks; %>
     <% for (let tinyURL in currUserLinks) { %>
-    <form method="POST" style="margin:20px" action=<%=`/urls/${tinyURL}/delete`%>>
-      <li>
-        <a href=<%= urls[tinyURL]%>> <%= tinyURL %></a> &#x2192 <a href=<%= urls[tinyURL] %>> <%= urls[tinyURL]; %> </a>
+    <li>
+      <form method="POST" style="margin:20px" action=<%=`/urls/${tinyURL}/delete`%>>
+
+        <a href=<%= urls[tinyURL]%>> localhost:8080/u/<%= tinyURL %></a> &#x2192 <a href=<%= urls[tinyURL] %>> <%= urls[tinyURL]; %> </a>
         <a style="margin:15px" href=<%=`/urls/${tinyURL}`%>>Edit</a>
         <input type="submit" style="margin:10px" value="Delete">
-      </li>
-    </form>
+      </form>
+    </li>
     <% } %>
   </ul>
   <% } %>
-  <% include partials/_footer.ejs %>
+  <% if (user_id) {%>
+    <a href="/urls/new">Create a new tinyURL link</a>
+  <% } %>
 </body>
 </html>

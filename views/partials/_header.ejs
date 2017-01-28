@@ -5,15 +5,18 @@
 </h1>
 
 <div style="margin:30px;">
-  <% if (user_id) {%>
+  <% if (!user_id) {%>
+    <a href="/login" style="margin:15px">Log in</a>
+    <a href="/register" style="margin:15px">Register</a>
+  <% } else { %>
   <div>
-    You are logged in as: <%= allUsers[user_id].email %>
+    You are logged in as: <%= userEmail %>
   </div>
   <form style="display:inline;" method="POST" action="/logout" >
     <input type="submit" value="Log out">
   </form>
-  <% } else { %>
-    <a href="/login" style="margin:15px">Log in</a>
-    <a href="/register" style="margin:15px">Register</a>
   <% } %>
 </div>
+
+
+
