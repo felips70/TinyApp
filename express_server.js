@@ -4,6 +4,7 @@ const PORT = process.env.PORT || 8080; //default port 8080
 const bodyParser = require("body-parser");
 const bcrypt = require('bcrypt');
 const cookieSession = require('cookie-session');
+
 app.use(bodyParser.urlencoded({extended: true}));
 app.set("view engine", "ejs");
 
@@ -40,11 +41,11 @@ function resolveEmail (email) {
 
 //If given email and password, if exist in usersDatabase returns corresponding user_id, takes into account hashing passwords
 function getUserId (email, password) {
-  for (let userIds in usersDatabase) {
-    let currUserEmail = usersDatabase[userIds].email;
-    let hashedPassword = usersDatabase[userIds].password;
+  for (let userId in usersDatabase) {
+    let currUserEmail = usersDatabase[userId].email;
+    let hashedPassword = usersDatabase[userId].password;
     if (email === currUserEmail && bcrypt.compareSync(password, hashedPassword)) {
-      return usersDatabase[userIds].id;
+      return usersDatabase[userId].id;
     }
   }
   return null;
@@ -61,12 +62,14 @@ function getTemplateVars (req, res, tinyURL) {
     userLinks = usersDatabase[userId].links;
     userEmail = usersDatabase[userId].email;
   }
-  let templateVars = { urls: urlDatabase,
-                       user_id: req.session.user_id,
-                       userLinks: userLinks,
-                       userEmail: userEmail,
-                       urlId: urlId
-                     }
+
+  let templateVars = {
+    urls: urlDatabase,
+    user_id: req.session.user_id,
+    userLinks: userLinks,
+    userEmail: userEmail,
+    urlId: urlId
+  };
   return templateVars;
 }
 
@@ -76,7 +79,7 @@ function generateRandomString() {
 
 //Root, redirects to /urls
 app.get("/", (req, res) => {
-  res.redirect("/urls")
+  res.redirect("/urls");
 });
 
 //Main page where all links are displayed
@@ -89,9 +92,13 @@ app.get("/urls", (req, res) => {
 
 //Page where user can add a new URL
 app.get("/urls/new", (req, res) => {
-  let templateVars = getTemplateVars(req, res);
+  if (req.session.user_id) {
+    let templateVars = getTemplateVars(req, res);
 
-  res.render("urls_new", templateVars);
+    res.render("urls_new", templateVars);
+  } else {
+    res.status(400).send("You have to be logged in to create new links!")
+  }
 });
 
 //Redirects all tinyURLS to their corresponding longURL links
@@ -128,11 +135,12 @@ app.post("/register", (req, res) => {
     let userId = generateRandomString();
     req.session.user_id = userId;
 
-    usersDatabase[userId] = {id: userId,
-                             email: req.body.email,
-                             password: hashedPassword,
-                             links: {} };   //Object where user-specific links are stored
-
+    usersDatabase[userId] = {
+      id: userId,
+      email: req.body.email,
+      password: hashedPassword,
+      links: {} //Object where user-specific links are stored
+    };
     res.redirect("/");
   }
 });
@@ -159,21 +167,29 @@ app.post("/login", (req, res) => {
 
 //Deletes selected tinyURL along with its corresponding URL
 app.post("/urls/:tinyURL/delete", (req, res) => {
-  let userIdCookie = req.session.user_id;
-  delete urlDatabase[req.params.tinyURL];                        //Deletes link in urlDatabase (where all URLs are, but are not bound to the users)
-  delete usersDatabase[userIdCookie].links[req.params.tinyURL];  //Deletes link in usersDatabase (where user-specific links are)
-  res.redirect("/urls");
+    if (req.session.user_id) {
+      let userIdCookie = req.session.user_id;
+      delete urlDatabase[req.params.tinyURL];                        //Deletes link in urlDatabase (where all URLs are, but are not bound to the users)
+      delete usersDatabase[userIdCookie].links[req.params.tinyURL];  //Deletes link in usersDatabase (where user-specific links are)
+      res.redirect("/urls");
+  } else {
+      res.status(400).send("You have to be logged in to delete links!")
+  }
 });
 
 //Updates/changes URL to which tinyURL points to
 app.post("/urls/:tinyURL", (req, res) => {
     let userIdCookie = req.session.user_id;
-  if (!urlDatabase[req.params.tinyURL]) {
-    res.status(404).send('This link does not exist in the database');
+  if (userIdCookie) {
+    if (!urlDatabase[req.params.tinyURL]) {
+      res.status(404).send('This link does not exist in the database');
+    } else {
+      urlDatabase[req.params.tinyURL] = req.body.newURL;                        //Updates link in urlDatabase (where all URLs are, but are not bound to the users)
+      usersDatabase[userIdCookie].links[req.params.tinyURL] = req.body.newURL;  //Updates link in usersDatabase (where user-specific links are)
+      res.redirect("/urls");
+    }
   } else {
-    urlDatabase[req.params.tinyURL] = req.body.newURL;                        //Updates link in urlDatabase (where all URLs are, but are not bound to the users)
-    usersDatabase[userIdCookie].links[req.params.tinyURL] = req.body.newURL;  //Updates link in usersDatabase (where user-specific links are)
-    res.redirect("/urls");
+    res.status(400).send("You have to be logged in to update links!")
   }
 });
 
@@ -199,14 +215,13 @@ app.post("/urls", (req, res) => {
 app.get("/urls/:tinyURL", (req, res) => {
   let userIdCookie = req.session.user_id;
   if (!userIdCookie) {
-      res.status(400).send('You have to be logged in to edit links');
+      res.status(401).send('You have to be logged in to edit links');
   } else {
     let templateVars = getTemplateVars(req, res, req.params.tinyURL);
 
     res.render("urls_show", templateVars);
   }
 });
-
 
 app.listen(PORT, () => {
   console.log(`Example app listening on port ${PORT}!`);
